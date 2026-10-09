@@ -1,0 +1,15 @@
+# Maven
+tests/target/
+
+# Allure report generator installed by "mvn allure:serve"
+tests/.allure/
+
+# Node
+sut/node_modules/
+
+# IDE and OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db

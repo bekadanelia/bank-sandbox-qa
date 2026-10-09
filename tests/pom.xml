@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.github.bekadanelia</groupId>
+    <artifactId>bank-sandbox-tests</artifactId>
+    <version>1.0.0</version>
+    <name>Sandbox Bank test suite</name>
+    <description>API, database, UI and end to end tests for Sandbox Bank</description>
+
+    <!--
+        Layout: src/main is the framework (API client, page objects, database access, JUnit
+        extensions), src/test holds only tests. Dependencies are therefore in compile scope.
+
+        Common commands:
+          mvn test                              every suite
+          mvn test -Dgroups=smoke               one suite: smoke, framework, api, db, ui, e2e
+          mvn test -Dgroups="api | db"          several suites
+          mvn test -Dtest=FxConversionTest      one class
+          mvn test -Dbrowser=firefox            any key of config.properties can be overridden
+          mvn allure:serve                      build the report and open it
+    -->
+
+    <properties>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <junit.version>6.1.3</junit.version>
+        <rest-assured.version>6.0.1</rest-assured.version>
+        <playwright.version>1.63.0</playwright.version>
+        <axe.version>4.13.0</axe.version>
+        <assertj.version>3.27.7</assertj.version>
+        <json-schema.version>1.9.1</json-schema.version>
+        <jmail.version>2.1.0</jmail.version>
+        <jackson.version>2.22.2</jackson.version>
+        <postgresql.version>42.7.13</postgresql.version>
+        <allure.version>3.0.0</allure.version>
+        <aspectj.version>1.9.25.1</aspectj.version>
+        <slf4j.version>2.0.19</slf4j.version>
+
+        <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
+        <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
+        <allure-maven.version>3.1.0</allure-maven.version>
+        <!-- Version of the Allure Report generator. The CI workflow uses the same one. -->
+        <allure-report.version>3.20.0</allure-report.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>${junit.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.qameta.allure</groupId>
+                <artifactId>allure-bom</artifactId>
+                <version>${allure.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- Test engine -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>${assertj.version}</version>
+        </dependency>
+
+        <!-- API layer -->
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <version>${rest-assured.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+
+        <!-- Contract check: reads openapi.yaml and validates responses against its JSON Schema -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.harrel</groupId>
+            <artifactId>json-schema</artifactId>
+            <version>${json-schema.version}</version>
+        </dependency>
+        <!-- Needed by json-schema to validate "format" keywords such as uuid and date-time -->
+        <dependency>
+            <groupId>com.sanctionco.jmail</groupId>
+            <artifactId>jmail</artifactId>
+            <version>${jmail.version}</version>
+        </dependency>
+
+        <!-- Database layer -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgresql.version}</version>
+        </dependency>
+
+        <!-- UI layer -->
+        <dependency>
+            <groupId>com.microsoft.playwright</groupId>
+            <artifactId>playwright</artifactId>
+            <version>${playwright.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.deque.html.axe-core</groupId>
+            <artifactId>playwright</artifactId>
+            <version>${axe.version}</version>
+        </dependency>
+
+        <!-- Reporting -->
+        <dependency>
+            <groupId>io.qameta.allure</groupId>
+            <artifactId>allure-jupiter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.qameta.allure</groupId>
+            <artifactId>allure-rest-assured</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>${slf4j.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven-compiler-plugin.version}</version>
+                <configuration>
+                    <!-- Keeps parameter names in the class files, which reports of parameterized tests use. -->
+                    <parameters>true</parameters>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven-surefire-plugin.version}</version>
+                <configuration>
+                    <!-- The AspectJ agent turns @Step methods into steps of the Allure report. -->
+                    <argLine>
+                        -javaagent:"${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar"
+                    </argLine>
+                    <!-- A failed test is a finding. It is never retried into a pass. -->
+                    <rerunFailingTestsCount>0</rerunFailingTestsCount>
+                    <trimStackTrace>false</trimStackTrace>
+                </configuration>
+                <dependencies>
+                    <!-- Declared here so that Maven downloads the agent jar the argLine points to. -->
+                    <dependency>
+                        <groupId>org.aspectj</groupId>
+                        <artifactId>aspectjweaver</artifactId>
+                        <version>${aspectj.version}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+
+            <plugin>
+                <groupId>io.qameta.allure</groupId>
+                <artifactId>allure-maven</artifactId>
+                <version>${allure-maven.version}</version>
+                <configuration>
+                    <reportVersion>${allure-report.version}</reportVersion>
+                    <configPath>${project.basedir}/allurerc.mjs</configPath>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

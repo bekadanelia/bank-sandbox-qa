@@ -1,0 +1,41 @@
+# Sandbox Bank and its database.
+#
+#   docker compose up -d --build --wait     start and wait until the bank answers
+#   docker compose down                     stop and forget all data
+#
+# Web client and API: http://localhost:8080   API reference: http://localhost:8080/docs/
+name: bank-sandbox
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: sandbox_bank
+      POSTGRES_USER: sandbox
+      POSTGRES_PASSWORD: sandbox
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      # Creates the read only role that the test suite verifies data with.
+      - ./sut/db/init:/docker-entrypoint-initdb.d:ro
+    # The data lives in memory, so every start begins with an empty database.
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sandbox -d sandbox_bank"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  bank:
+    build: ./sut
+    environment:
+      DATABASE_URL: postgres://sandbox:sandbox@db:5432/sandbox_bank
+      JWT_SECRET: local-sandbox-secret
+      # Names of seeded defects from sut/src/faults.js, separated by commas. Empty means a healthy bank.
+      SANDBOX_FAULTS: ${SANDBOX_FAULTS:-}
+    ports:
+      - "${BANK_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy

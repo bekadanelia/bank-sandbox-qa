@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sandbox Bank</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <p class="brand">Sandbox Bank</p>
+    <div id="session" class="session" hidden>
+      <span id="customer-name" data-testid="customer-name"></span>
+      <button id="sign-out" type="button" class="secondary">Sign out</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="notice" class="message notice" role="status" data-testid="notice"></div>
+    <div id="alert" class="message alert" role="alert" data-testid="alert"></div>
+
+    <section id="view-login" class="card narrow" aria-labelledby="login-title" hidden>
+      <h1 id="login-title" tabindex="-1">Sign in</h1>
+      <form id="login-form" novalidate>
+        <label for="login-email">Email</label>
+        <input id="login-email" type="email" autocomplete="username">
+        <p class="field-error" data-error-for="email"></p>
+
+        <label for="login-password">Password</label>
+        <input id="login-password" type="password" autocomplete="current-password">
+        <p class="field-error" data-error-for="password"></p>
+
+        <button type="submit">Sign in</button>
+      </form>
+      <p>New here? <a href="#/register">Create an account</a></p>
+    </section>
+
+    <section id="view-register" class="card narrow" aria-labelledby="register-title" hidden>
+      <h1 id="register-title" tabindex="-1">Create an account</h1>
+      <form id="register-form" novalidate>
+        <label for="register-name">Full name</label>
+        <input id="register-name" type="text" autocomplete="name">
+        <p class="field-error" data-error-for="fullName"></p>
+
+        <label for="register-email">Email</label>
+        <input id="register-email" type="email" autocomplete="email">
+        <p class="field-error" data-error-for="email"></p>
+
+        <label for="register-password">Password</label>
+        <input id="register-password" type="password" autocomplete="new-password" aria-describedby="register-password-hint">
+        <p id="register-password-hint" class="hint">At least 8 characters</p>
+        <p class="field-error" data-error-for="password"></p>
+
+        <button type="submit">Create account</button>
+      </form>
+      <p>Already a customer? <a href="#/login">Sign in</a></p>
+    </section>
+
+    <section id="view-dashboard" aria-labelledby="dashboard-title" hidden>
+      <h1 id="dashboard-title" tabindex="-1">Your accounts</h1>
+      <div class="columns">
+        <div class="column wide">
+          <div class="card">
+            <div id="accounts-panel" class="table-scroll" role="region" aria-labelledby="accounts-caption" tabindex="0">
+            <table id="accounts">
+              <caption id="accounts-caption" class="visually-hidden">Accounts</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Account number</th>
+                  <th scope="col">Currency</th>
+                  <th scope="col" class="amount">Balance</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            </div>
+            <p id="no-accounts" class="empty" hidden>You have no accounts yet. Open one to get started.</p>
+          </div>
+
+          <section class="card" aria-labelledby="statement-title">
+            <h2 id="statement-title">Statement</h2>
+            <p id="statement-account" class="hint" data-testid="statement-account"></p>
+            <div id="statement-panel" class="table-scroll" role="region" aria-labelledby="statement-caption" tabindex="0">
+            <table id="statement">
+              <caption id="statement-caption" class="visually-hidden">Statement entries, newest first</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Description</th>
+                  <th scope="col" class="amount">Paid out</th>
+                  <th scope="col" class="amount">Paid in</th>
+                  <th scope="col" class="amount">Balance</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            </div>
+            <p id="statement-empty" class="empty" hidden>No entries yet.</p>
+            <nav class="pager" aria-label="Statement pages">
+              <button id="statement-previous" type="button" class="secondary">Previous</button>
+              <span id="statement-page" data-testid="statement-page"></span>
+              <button id="statement-next" type="button" class="secondary">Next</button>
+            </nav>
+          </section>
+        </div>
+
+        <div class="column">
+          <form id="transfer-form" class="card" aria-labelledby="transfer-title" novalidate>
+            <h2 id="transfer-title">Transfer</h2>
+            <label for="transfer-source">From account</label>
+            <select id="transfer-source"></select>
+            <p class="field-error" data-error-for="sourceAccountId"></p>
+
+            <label for="transfer-target">To account number</label>
+            <input id="transfer-target" type="text" autocomplete="off" spellcheck="false">
+            <p class="field-error" data-error-for="targetAccountNumber"></p>
+
+            <label for="transfer-amount">Amount</label>
+            <input id="transfer-amount" type="text" inputmode="decimal" autocomplete="off">
+            <p class="field-error" data-error-for="amount"></p>
+
+            <label for="transfer-description">Description (optional)</label>
+            <input id="transfer-description" type="text" maxlength="140" autocomplete="off">
+            <p class="field-error" data-error-for="description"></p>
+
+            <button type="submit">Send</button>
+          </form>
+
+          <form id="deposit-form" class="card" aria-labelledby="deposit-title" novalidate>
+            <h2 id="deposit-title">Add funds</h2>
+            <label for="deposit-account">To account</label>
+            <select id="deposit-account"></select>
+
+            <label for="deposit-amount">Amount</label>
+            <input id="deposit-amount" type="text" inputmode="decimal" autocomplete="off">
+            <p class="field-error" data-error-for="amount"></p>
+
+            <button type="submit">Add funds</button>
+          </form>
+
+          <form id="open-account-form" class="card" aria-labelledby="open-account-title" novalidate>
+            <h2 id="open-account-title">Open account</h2>
+            <label for="open-account-currency">Currency</label>
+            <select id="open-account-currency">
+              <option value="GEL">GEL</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+            </select>
+            <button type="submit">Open account</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>This is a test target. No real money moves here. <a href="/docs/">API reference</a></p>
+  </footer>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

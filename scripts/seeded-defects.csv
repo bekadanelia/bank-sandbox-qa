@@ -1,0 +1,15 @@
+# The defects that can be switched on in the bank (sut/src/faults.js) and the tests that must catch them.
+#
+# defect;suites to run;rule it breaks;tests that must fail, separated by commas
+#
+# A test is named by its class and method. SeededDefectsManifestTest fails when a line here
+# names a test, a rule or a defect that no longer exists.
+FX_TRUNCATE;api | db;FX-02;FxConversionTest.a_conversion_uses_the_published_rate_and_rounds_half_up,LedgerInvariantsTest.every_stored_conversion_equals_amount_times_rate_rounded_half_up
+LIMIT_OFF_BY_ONE;api;TRF-05;TransferRulesTest$PerTransferLimit.amounts_up_to_the_limit_are_sent
+IDEMPOTENCY_IGNORED;api;IDM-02;IdempotencyTest.a_repeated_transfer_returns_the_first_answer_and_moves_the_money_once
+NO_ROW_LOCK;api | db;TRF-10;ConcurrencyTest.the_same_money_cannot_be_spent_twice,LedgerInvariantsTest.every_account_balance_equals_the_sum_of_its_ledger_entries
+DEADLOCK_PRONE_LOCK;api;TRF-10;ConcurrencyTest.deposits_of_different_customers_do_not_block_each_other
+FX_POSITION_SKIPPED;db;LED-01;LedgerInvariantsTest.debits_equal_credits_in_every_transfer_and_currency,LedgerInvariantsTest.all_balances_of_one_currency_add_up_to_zero
+IDOR_ACCOUNT_READ;api;ACC-04;AccountAccessControlTest.a_stranger_cannot_read_the_account,AccountAccessControlTest.a_stranger_cannot_read_the_statement
+STATEMENT_ORDER;api;STM-01;StatementTest.entries_are_listed_newest_first_with_the_balance_after_each
+UI_STALE_BALANCE;ui;UI-02;TransferUiTest.a_transfer_updates_both_balances_and_the_statement_without_a_reload

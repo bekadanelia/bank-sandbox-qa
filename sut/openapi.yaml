@@ -1,0 +1,742 @@
+openapi: 3.1.0
+info:
+  title: Sandbox Bank API
+  version: 1.0.0
+  description: |
+    Retail banking backend used as a system under test.
+
+    Money is always sent and returned as a string with two decimals, never as a JSON number.
+    Every error has the same shape and a stable `code`.
+servers:
+  - url: /api/v1
+tags:
+  - name: Customers
+  - name: Accounts
+  - name: Money movement
+  - name: Reference data
+security:
+  - bearerAuth: []
+
+paths:
+  /customers:
+    post:
+      operationId: registerCustomer
+      tags: [Customers]
+      summary: Register a customer
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrationRequest'
+      responses:
+        '201':
+          description: The customer was created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: The email is already registered (`EMAIL_ALREADY_REGISTERED`). Emails are compared without case.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+
+  /customers/me:
+    get:
+      operationId: getCurrentCustomer
+      tags: [Customers]
+      summary: The customer the token belongs to
+      responses:
+        '200':
+          description: The current customer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [Customers]
+      summary: Exchange email and password for a bearer token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: A token that is valid for `expiresIn` seconds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: >
+            `INVALID_CREDENTIALS`. The answer is the same for an unknown email and a wrong password.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+
+  /accounts:
+    post:
+      operationId: openAccount
+      tags: [Accounts]
+      summary: Open an account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenAccountRequest'
+      responses:
+        '201':
+          description: The new account, active and with a zero balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          description: The customer already holds 5 accounts (`ACCOUNT_LIMIT_REACHED`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      operationId: listAccounts
+      tags: [Accounts]
+      summary: The accounts of the current customer, oldest first
+      responses:
+        '200':
+          description: The accounts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /accounts/{accountId}:
+    parameters:
+      - $ref: '#/components/parameters/AccountId'
+    get:
+      operationId: getAccount
+      tags: [Accounts]
+      summary: One account of the current customer
+      responses:
+        '200':
+          description: The account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/AccountNotFound'
+
+  /accounts/{accountId}/freeze:
+    parameters:
+      - $ref: '#/components/parameters/AccountId'
+    post:
+      operationId: freezeAccount
+      tags: [Accounts]
+      summary: Freeze an account so that no money can move in or out
+      description: Freezing an account that is already frozen succeeds and changes nothing.
+      responses:
+        '200':
+          description: The frozen account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/AccountNotFound'
+
+  /accounts/{accountId}/unfreeze:
+    parameters:
+      - $ref: '#/components/parameters/AccountId'
+    post:
+      operationId: unfreezeAccount
+      tags: [Accounts]
+      summary: Make a frozen account active again
+      responses:
+        '200':
+          description: The active account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/AccountNotFound'
+
+  /accounts/{accountId}/transactions:
+    parameters:
+      - $ref: '#/components/parameters/AccountId'
+    get:
+      operationId: listTransactions
+      tags: [Accounts]
+      summary: The statement of an account, newest entry first
+      parameters:
+        - name: page
+          in: query
+          description: Page index, starting at 0
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100000
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: One page of the statement. A page past the end is empty.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/AccountNotFound'
+
+  /accounts/{accountId}/deposits:
+    parameters:
+      - $ref: '#/components/parameters/AccountId'
+    post:
+      operationId: deposit
+      tags: [Money movement]
+      summary: Pay cash into an account
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepositRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/TransferCompleted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/AccountNotFound'
+        '409':
+          $ref: '#/components/responses/IdempotencyKeyReused'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          description: >
+            The deposit broke a business rule and was stored as rejected:
+            `ACCOUNT_NOT_ACTIVE` or `LIMIT_EXCEEDED` (more than 100000.00 in one deposit).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /transfers:
+    post:
+      operationId: createTransfer
+      tags: [Money movement]
+      summary: Move money to another account
+      description: |
+        The source must be an account of the current customer. The target is addressed by account
+        number and may belong to anyone. When the currencies differ the amount is converted with the
+        published rate and rounded half up to two decimals.
+
+        Sending the same `Idempotency-Key` again returns the first answer and moves no money.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/TransferCompleted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/AccountNotFound'
+        '409':
+          $ref: '#/components/responses/IdempotencyKeyReused'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          description: |
+            The transfer broke a business rule. Rules are checked in this order and the first broken
+            one is reported: `SAME_ACCOUNT`, `ACCOUNT_NOT_ACTIVE`, `LIMIT_EXCEEDED` (more than 10000.00
+            in the source currency), `AMOUNT_TOO_SMALL` (the converted amount rounds to zero),
+            `INSUFFICIENT_FUNDS`.
+
+            These transfers are stored with status `REJECTED` and the answer carries their `transferId`.
+            `TARGET_ACCOUNT_NOT_FOUND` is reported before anything is stored and has no `transferId`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /transfers/{transferId}:
+    get:
+      operationId: getTransfer
+      tags: [Money movement]
+      summary: A transfer or deposit started by the current customer
+      parameters:
+        - name: transferId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The transfer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transfer'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: >
+            `TRANSFER_NOT_FOUND`. Also returned for transfers started by other customers.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /fx-rates:
+    get:
+      operationId: listFxRates
+      tags: [Reference data]
+      summary: Conversion rates for every currency pair
+      description: The rate from A to B and the rate from B to A differ. The difference is the bank's spread.
+      responses:
+        '200':
+          description: The rates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FxRateList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    AccountId:
+      name: accountId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Chosen by the client and unique per intended money movement
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9_-]{8,64}$'
+
+  responses:
+    TransferCompleted:
+      description: The money has moved
+      headers:
+        Idempotency-Replayed:
+          description: Present with the value `true` when this answer repeats an earlier one
+          schema:
+            type: string
+            enum: ['true']
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Transfer'
+    BadRequest:
+      description: >
+        `VALIDATION_ERROR` with one entry in `details` per problem, or `MALFORMED_JSON`
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: The bearer token is missing, expired or not valid (`UNAUTHORIZED`)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    AccountNotFound:
+      description: >
+        `ACCOUNT_NOT_FOUND`. Also returned for accounts of other customers, so the answer never
+        reveals whether an account exists.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    IdempotencyKeyReused:
+      description: The `Idempotency-Key` was already used with a different request (`IDEMPOTENCY_KEY_REUSED`)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    PayloadTooLarge:
+      description: The request body is larger than 16 kB (`PAYLOAD_TOO_LARGE`)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    UnsupportedMediaType:
+      description: The request body is not `application/json` (`UNSUPPORTED_MEDIA_TYPE`)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Amount:
+      type: string
+      pattern: '^\d+\.\d{2}$'
+      examples: ['125.50']
+    AmountInput:
+      type: string
+      description: A positive decimal with at most two decimal places
+      pattern: '^(0|[1-9]\d{0,12})(\.\d{1,2})?$'
+      examples: ['125.5']
+    Currency:
+      type: string
+      enum: [GEL, USD, EUR]
+    AccountNumber:
+      type: string
+      description: IBAN layout with ISO 13616 check digits
+      pattern: '^GE\d{2}ZZ\d{16}$'
+      examples: ['GE42ZZ0000001000000007']
+    Timestamp:
+      type: string
+      format: date-time
+      pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$'
+
+    RegistrationRequest:
+      type: object
+      required: [email, fullName, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 100
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    Customer:
+      type: object
+      additionalProperties: false
+      required: [id, email, fullName, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        fullName:
+          type: string
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+    Token:
+      type: object
+      additionalProperties: false
+      required: [accessToken, tokenType, expiresIn]
+      properties:
+        accessToken:
+          type: string
+          pattern: '^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$'
+        tokenType:
+          const: Bearer
+        expiresIn:
+          type: integer
+          minimum: 1
+
+    OpenAccountRequest:
+      type: object
+      required: [currency]
+      properties:
+        currency:
+          $ref: '#/components/schemas/Currency'
+    Account:
+      type: object
+      additionalProperties: false
+      required: [id, number, currency, balance, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          $ref: '#/components/schemas/AccountNumber'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        balance:
+          $ref: '#/components/schemas/Amount'
+        status:
+          type: string
+          enum: [ACTIVE, FROZEN]
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+    AccountList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/Account'
+
+    Transaction:
+      type: object
+      description: One ledger entry on one account
+      additionalProperties: false
+      required: [id, transferId, type, direction, amount, currency, balanceAfter, description, createdAt]
+      properties:
+        id:
+          type: integer
+        transferId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [TRANSFER, DEPOSIT]
+        direction:
+          type: string
+          enum: [DEBIT, CREDIT]
+        amount:
+          $ref: '#/components/schemas/Amount'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        balanceAfter:
+          $ref: '#/components/schemas/Amount'
+        description:
+          type: [string, 'null']
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+    TransactionPage:
+      type: object
+      additionalProperties: false
+      required: [items, page, size, totalItems, totalPages]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+        page:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalItems:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+
+    DepositRequest:
+      type: object
+      required: [amount]
+      properties:
+        amount:
+          $ref: '#/components/schemas/AmountInput'
+        description:
+          type: [string, 'null']
+          maxLength: 140
+    TransferRequest:
+      type: object
+      required: [sourceAccountId, targetAccountNumber, amount]
+      properties:
+        sourceAccountId:
+          type: string
+          format: uuid
+        targetAccountNumber:
+          $ref: '#/components/schemas/AccountNumber'
+        amount:
+          $ref: '#/components/schemas/AmountInput'
+        description:
+          type: [string, 'null']
+          maxLength: 140
+    Transfer:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - type
+        - status
+        - sourceAccountId
+        - targetAccountNumber
+        - sourceAmount
+        - sourceCurrency
+        - targetAmount
+        - targetCurrency
+        - fxRate
+        - rejectionReason
+        - description
+        - createdAt
+        - completedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [TRANSFER, DEPOSIT]
+        status:
+          type: string
+          enum: [COMPLETED, REJECTED]
+        sourceAccountId:
+          description: Null for deposits, where the money comes from the bank's cash account
+          type: [string, 'null']
+          format: uuid
+        targetAccountNumber:
+          $ref: '#/components/schemas/AccountNumber'
+        sourceAmount:
+          $ref: '#/components/schemas/Amount'
+        sourceCurrency:
+          $ref: '#/components/schemas/Currency'
+        targetAmount:
+          description: Null when the transfer was rejected
+          oneOf:
+            - $ref: '#/components/schemas/Amount'
+            - type: 'null'
+        targetCurrency:
+          $ref: '#/components/schemas/Currency'
+        fxRate:
+          description: Set only when the currencies differ
+          type: [string, 'null']
+          pattern: '^\d+\.\d{6}$'
+        rejectionReason:
+          type: [string, 'null']
+          enum: [SAME_ACCOUNT, ACCOUNT_NOT_ACTIVE, LIMIT_EXCEEDED, AMOUNT_TOO_SMALL, INSUFFICIENT_FUNDS, null]
+        description:
+          type: [string, 'null']
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+        completedAt:
+          oneOf:
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
+
+    FxRate:
+      type: object
+      additionalProperties: false
+      required: [baseCurrency, quoteCurrency, rate, updatedAt]
+      properties:
+        baseCurrency:
+          $ref: '#/components/schemas/Currency'
+        quoteCurrency:
+          $ref: '#/components/schemas/Currency'
+        rate:
+          type: string
+          pattern: '^\d+\.\d{6}$'
+        updatedAt:
+          $ref: '#/components/schemas/Timestamp'
+    FxRateList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FxRate'
+
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message, requestId]
+      properties:
+        code:
+          type: string
+          pattern: '^[A-Z][A-Z_]+$'
+        message:
+          type: string
+          minLength: 1
+        requestId:
+          description: The same value as the `X-Request-Id` response header
+          type: string
+        transferId:
+          description: Present when a stored transfer was rejected
+          type: string
+          format: uuid
+        details:
+          description: Present for `VALIDATION_ERROR`
+          type: array
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [field, issue]
+            properties:
+              field:
+                type: string
+              issue:
+                type: string
