@@ -42,7 +42,7 @@
         <slf4j.version>2.0.19</slf4j.version>
 
         <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
-        <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
+        <maven-surefire-plugin.version>3.6.0</maven-surefire-plugin.version>
         <allure-maven.version>3.1.0</allure-maven.version>
         <!-- Version of the Allure Report generator. The CI workflow uses the same one. -->
         <allure-report.version>3.20.0</allure-report.version>
