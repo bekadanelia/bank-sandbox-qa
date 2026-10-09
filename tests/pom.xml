@@ -34,7 +34,7 @@
         <axe.version>4.13.0</axe.version>
         <assertj.version>3.27.7</assertj.version>
         <json-schema.version>1.9.1</json-schema.version>
-        <jmail.version>2.1.0</jmail.version>
+        <jmail.version>2.2.2</jmail.version>
         <jackson.version>2.22.2</jackson.version>
         <postgresql.version>42.7.13</postgresql.version>
         <allure.version>3.0.0</allure.version>
